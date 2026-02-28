@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Math Path</title>
+
+<style>
+
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #F4EBF7;
+}
+
+#grid {
+    display: grid;
+    grid-template-columns: repeat(9, 55px);
+    gap: 9px;
+    justify-content: center;
+    margin: 20px auto;
+}
+
+.cell {
+    width: 55px;
+    height: 55px;
+    background: white;
+    border: 2px solid #333;
+    border-radius:10%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
+.cell.active {
+    background: #4caf50;
+    color: white;
+}
+
+#controls {
+    margin: 15px;
+}
+
+button {
+    padding: 8px 15px;
+    font-size: 16px;
+    margin: 5px;
+    border-radius:10%;
+    background: white;
+}
+
+#message {
+    font-weight: bold;
+    min-height: 24px;
+}
+
+h1{
+  font-family: Cambria;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Math+Path</h1>
+<h4>&copy; Lisa Nicole Ewart</h4>
+
+<div id="stats">
+  Score: <span id="score">0</span> |
+  Solutions: <span id="found">0</span> /
+  <span id="total">0</span>
+</div>
+
+<div id="grid"></div>
+
+<div id="controls">
+    <button onclick="setOp('+')">+</button>
+    <button onclick="setOp('-')">-</button>
+    <button onclick="setOp('*')">×</button>
+    <button onclick="setOp('/')">÷</button>
+
+    <br><br>
+
+    <button onclick="submit()">Submit</button>
+    <button onclick="reset()">Reset</button>
+    <button onclick="newBoard()">New Board</button>
+</div>
+
+<div id="message"></div>
+
+<script>
+
+/* =====================
+   CONFIG
+===================== */
+
+const size = 9;
+const maxNum = 120;
+const seedCount = 65;
+
+const TARGET_SOLUTIONS = 36;
+const MAX_TRIES = 200;
+
+
+/* =====================
+   STATE
+===================== */
+
+let board = [];
+
+let path = [];
+let dragging = false;
+
+let operator = null;
+
+let score = 0;
+let found = 0;
+let totalSolutions = 0;
+
+const used = new Set();
+const allSolutions = new Set();
+
+
+/* =====================
+   DIRECTIONS
+===================== */
+
+const dirs = [
+  [1,0],[-1,0],[0,1],[0,-1],
+  [1,1],[1,-1],[-1,1],[-1,-1]
+];
+
+
+/* =====================
+   BOARD
+===================== */
+
+function buildBoard() {
+
+  board = Array(size)
+    .fill()
+    .map(()=>Array(size).fill(null));
+
+  for (let i=0;i<seedCount;i++) {
+    plantEquation();
+  }
+
+  for (let r=0;r<size;r++) {
+    for (let c=0;c<size;c++) {
+
+      if (board[r][c]===null) {
+        board[r][c] = rand(10,maxNum);
+      }
+    }
+  }
+}
+
+
+/* =====================
+   PLANT EQUATIONS
+===================== */
+
+function plantEquation() {
+
+  const op = ['+','+','*','-','/'][rand(0,4)];
+
+  let a,b,c;
+
+  switch(op) {
+
+    case '+':
+      a = rand(15,60);
+      b = rand(15,60);
+      c = a+b;
+      break;
+
+    case '-':
+      a = rand(40,120);
+      b = rand(5,a);
+      c = a-b;
+      break;
+
+    case '*':
+      a = rand(3,18);
+      b = rand(3,12);
+      c = a*b;
+      break;
+
+    case '/':
+      b = rand(2,15);
+      c = rand(3,20);
+      a = b*c;
+      break;
+  }
+
+  if (c > maxNum) return;
+
+  const r = rand(0,size-1);
+  const c0 = rand(0,size-1);
+
+  const d = dirs[rand(0,7)];
+
+  const r1 = r + d[0];
+  const c1 = c0 + d[1];
+
+  const r2 = r + d[0]*2;
+  const c2 = c0 + d[1]*2;
+
+  if (!inside(r2,c2)) return;
+
+  board[r][c0] = a;
+  board[r1][c1] = b;
+  board[r2][c2] = c;
+}
+
+
+/* =====================
+   SOLUTION SCAN
+===================== */
+
+function scanSolutions(){
+
+  allSolutions.clear();
+
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+
+      for(const d of dirs){
+
+        const r1=r+d[0];
+        const c1=c+d[1];
+
+        const r2=r+d[0]*2;
+        const c2=c+d[1]*2;
+
+        if(!inside(r2,c2)) continue;
+
+        const a=board[r][c];
+        const b=board[r1][c1];
+        const c3=board[r2][c2];
+
+        check(a,b,c3,r,c,r1,c1,r2,c2);
+      }
+    }
+  }
+
+  totalSolutions = allSolutions.size;
+}
+
+
+function check(a,b,c,r,c0,r1,c1,r2,c2){
+
+  const base=`${r},${c0}-${r1},${c1}-${r2},${c2}`;
+
+  if(a+b===c) allSolutions.add(base+"+");
+  if(a-b===c) allSolutions.add(base+"-");
+  if(a*b===c) allSolutions.add(base+"*");
+  if(b!==0 && a/b===c) allSolutions.add(base+"/");
+}
+
+
+/* =====================
+   UI
+===================== */
+
+function makeGrid(){
+
+  const g=document.getElementById("grid");
+  g.innerHTML="";
+
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+
+      const cell=document.createElement("div");
+
+      cell.className="cell";
+      cell.textContent=board[r][c];
+
+      cell.dataset.row=r;
+      cell.dataset.col=c;
+
+      cell.addEventListener("mousedown",startDrag);
+      cell.addEventListener("mouseenter",dragOver);
+      cell.addEventListener("mouseup",endDrag);
+
+      g.appendChild(cell);
+    }
+  }
+
+  document.addEventListener("mouseup",endDrag);
+}
+
+
+/* =====================
+   DRAG
+===================== */
+
+function startDrag(e){
+  e.preventDefault();
+  reset();
+  dragging=true;
+  add(this);
+}
+
+function dragOver(){
+  if(!dragging) return;
+  tryAdd(this);
+}
+
+function endDrag(){
+  dragging=false;
+}
+
+function tryAdd(cell){
+
+  if(path.length===3) return;
+  if(path.includes(cell)) return;
+
+  if(path.length===0){
+    add(cell);
+    return;
+  }
+
+  const last=path[path.length-1];
+
+  if(adjacent(last,cell)){
+    add(cell);
+  }
+}
+
+function add(cell){
+  cell.classList.add("active");
+  path.push(cell);
+}
+
+function adjacent(a,b){
+
+  const r1=+a.dataset.row;
+  const c1=+a.dataset.col;
+
+  const r2=+b.dataset.row;
+  const c2=+b.dataset.col;
+
+  return Math.abs(r1-r2)<=1 &&
+         Math.abs(c1-c2)<=1;
+}
+
+
+/* =====================
+   GAME
+===================== */
+
+function setOp(op){
+  operator=op;
+  show("Operator: "+op);
+}
+
+
+function submit(){
+
+  if(path.length!==3){
+    show("Drag 3 squares");
+    return;
+  }
+
+  if(!operator){
+    show("Choose operator");
+    return;
+  }
+
+  const a=+path[0].textContent;
+  const b=+path[1].textContent;
+  const c=+path[2].textContent;
+
+  let r;
+
+  switch(operator){
+    case '+': r=a+b; break;
+    case '-': r=a-b; break;
+    case '*': r=a*b; break;
+    case '/': r=b? a/b:null; break;
+  }
+
+  if(r===null){
+    reset();
+    return;
+  }
+
+  const eq=
+    path.map(p=>`${p.dataset.row},${p.dataset.col}`)
+    .join("-")+operator;
+
+  if(used.has(eq)){
+    show("Used");
+    reset();
+    return;
+  }
+
+  if(r===c){
+
+    used.add(eq);
+
+    score+=c;
+    found++;
+
+    updateStats();
+
+    show("Correct! +"+c);
+
+  } else {
+    show("Wrong");
+  }
+
+  reset();
+}
+
+
+/* =====================
+   HELPERS
+===================== */
+
+function reset(){
+
+  document.querySelectorAll(".cell").forEach(c=>{
+    c.classList.remove("active");
+  });
+
+  path=[];
+  operator=null;
+}
+
+function show(m){
+  document.getElementById("message").textContent=m;
+}
+
+function updateStats(){
+
+  document.getElementById("score").textContent=score;
+  document.getElementById("found").textContent=found;
+  document.getElementById("total").textContent=totalSolutions;
+}
+
+
+function inside(r,c){
+  return r>=0&&r<size&&c>=0&&c<size;
+}
+
+function rand(a,b){
+  return Math.floor(Math.random()*(b-a+1))+a;
+}
+
+
+/* =====================
+   NEW BOARD
+===================== */
+
+function newBoard(){
+
+  let tries = 0;
+
+  while(true){
+
+    tries++;
+
+    used.clear();
+    score = 0;
+    found = 0;
+
+    buildBoard();
+    scanSolutions();
+
+    if(totalSolutions === TARGET_SOLUTIONS){
+      break;
+    }
+
+    if(tries > MAX_TRIES){
+      console.warn("Fallback board used");
+      break;
+    }
+  }
+
+  makeGrid();
+  reset();
+  updateStats();
+}
+
+
+/* =====================
+   INIT
+===================== */
+
+newBoard();
+
+</script>
+
+</body>
+</html>
