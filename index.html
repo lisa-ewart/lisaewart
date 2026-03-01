@@ -62,6 +62,15 @@ h1{
   font-family: Cambria;
   color:#AB2698;
 }
+.logo{
+  color:green;
+  font-weight:bold;
+  font-family: Impact;
+}
+.score{
+  color:green;
+  font-weight:bold;
+}
 h5{
   color:#AB2698;
 }
@@ -72,14 +81,15 @@ h5{
 <body>
 
 <h1>Math+Path</h1>
-<h5>&copy; 2026 Lisa Nicole Ewart</h5>
+<h1 class="logo">]+[</h1>
+<h5>&copy; Lisa Nicole Ewart</h5>
+<h5>Choose a path of three numbers;third number equals the sum. Choose the correct operand and select the Submit button</h5>
 
-<div id="stats">
+<div id="stats" class="score">
   Score: <span id="score">0</span> |
   Solutions: <span id="found">0</span> /
   <span id="total">0</span>
 </div>
-
 <div id="grid"></div>
 
 <div id="controls">
