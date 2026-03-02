@@ -1,85 +1,125 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+
 <title>Math+Path</title>
 
 <style>
 
-body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    background: #F4EBF7;
-    color:#666;
-}
+/* =====================
+   BASE
+===================== */
 
-#grid {
-    display: grid;
-    grid-template-columns: repeat(9, 55px);
-    gap: 9px;
-    justify-content: center;
-    margin: 20px auto;
-}
-
-.cell {
-    width: 55px;
-    height: 55px;
-    background: white;
-    
-    border-radius:10%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 17px;
-    font-weight: bold;
-    cursor: pointer;
-    user-select: none;
-}
-
-.cell.active {
-    background: #4caf50;
-    color: white;
-}
-
-#controls {
-    margin: 15px;
-}
-
-button {
-    padding: 8px 15px;
-    font-size: 16px;
-    margin: 5px;
-    border-radius:15%;
-    background: white;
-    border-color: green;
-    color:green;
-}
-
-#message {
-    font-weight: bold;
-    min-height: 24px;
+body{
+  font-family: Arial, sans-serif;
+  text-align:center;
+  background:#F4EBF7;
+  color:#666;
+  margin:0;
+  padding:10px;
 }
 
 h1{
-  font-family: Cambria;
+  font-family:Cambria;
   color:#AB2698;
+  margin-bottom:5px;
 }
-h5{
-    color:green;
-}
+
 .logo{
   color:green;
-  font-weight:bold;
-  font-family: Impact;
+  font-family:Impact;
+  font-size:28px;
 }
+
 .score{
   color:green;
   font-weight:bold;
 }
+
 .green{
   color:#AB2698;
-    font-size: 11px;
+  font-size:12px;
+}
+
+/* =====================
+   GRID
+===================== */
+
+#grid{
+  display:grid;
+  grid-template-columns:repeat(9,1fr);
+  gap:6px;
+  width:min(95vw,500px);
+  margin:15px auto;
+  touch-action:none;
+}
+
+.cell{
+  aspect-ratio:1/1;
+  background:white;
+  border-radius:12%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:clamp(14px,3.5vw,18px);
+  font-weight:bold;
+  user-select:none;
+  touch-action:none;
+}
+
+.cell.active{
+  background:#4caf50;
+  color:white;
+}
+
+/* =====================
+   CONTROLS
+===================== */
+
+#controls{
+  margin:15px 0;
+}
+
+button{
+  padding:10px 18px;
+  font-size:18px;
+  margin:5px;
+  border-radius:15%;
+  background:white;
+  border:2px solid green;
+  color:green;
+}
+
+button:active{
+  transform:scale(0.96);
+}
+
+/* =====================
+   MESSAGE
+===================== */
+
+#message{
+  font-weight:bold;
+  min-height:22px;
+  margin-top:8px;
+}
+
+/* =====================
+   MOBILE TUNING
+===================== */
+
+@media(max-width:600px){
+
+  h1{font-size:26px;}
+  .logo{font-size:24px;}
+
+  button{
+    font-size:17px;
+    padding:10px 16px;
+  }
 }
 
 </style>
@@ -88,27 +128,36 @@ h5{
 <body>
 
 <h1>Math+Path</h1>
-<h1 class="logo">]+[</h1>
+<div class="logo">]+[</div>
+
 <h5>&copy; 2026 Lisa Nicole Ewart</h5>
-<p class="green">Choose a path of three numbers (any direction); third number equals the sum.<br>Choose the correct operand and select the Submit button</p>
+
+<p class="green">
+Choose 3 connected numbers.<br>
+Apply the operator so the third is correct.
+</p>
+
 <div id="stats" class="score">
-  Score: <span id="score">0</span> |
-  Solutions: <span id="found">0</span> /
-  <span id="total">0</span>
+Score: <span id="score">0</span> |
+Solutions: <span id="found">0</span> /
+<span id="total">0</span>
 </div>
+
 <div id="grid"></div>
 
 <div id="controls">
-    <button onclick="setOp('+')">+</button>
-    <button onclick="setOp('-')">-</button>
-    <button onclick="setOp('*')">×</button>
-    <button onclick="setOp('/')">÷</button>
 
-    <br><br>
+  <button onclick="setOp('+')">+</button>
+  <button onclick="setOp('-')">−</button>
+  <button onclick="setOp('*')">×</button>
+  <button onclick="setOp('/')">÷</button>
 
-    <button onclick="submit()">Submit</button>
-    <button onclick="reset()">Reset</button>
-    <button onclick="newBoard()">New Board</button>
+  <br><br>
+
+  <button onclick="submit()">Submit</button>
+  <button onclick="reset()">Reset</button>
+  <button onclick="newBoard()">New Board</button>
+
 </div>
 
 <div id="message"></div>
@@ -116,7 +165,7 @@ h5{
 <script>
 
 /* =====================
-   CONFIG (MEDIUM MODE)
+   CONFIG
 ===================== */
 
 const size = 9;
@@ -126,123 +175,115 @@ const seedCount = 70;
 const TARGET_SOLUTIONS = 36;
 const MAX_TRIES = 250;
 
-
 /* =====================
    STATE
 ===================== */
 
-let board = [];
+let board=[];
+let path=[];
+let dragging=false;
 
-let path = [];
-let dragging = false;
+let operator=null;
 
-let operator = null;
+let score=0;
+let found=0;
+let totalSolutions=0;
 
-let score = 0;
-let found = 0;
-let totalSolutions = 0;
-
-const used = new Set();
-const allSolutions = new Set();
-
+const used=new Set();
+const allSolutions=new Set();
 
 /* =====================
    DIRECTIONS
 ===================== */
 
-const dirs = [
+const dirs=[
   [1,0],[-1,0],[0,1],[0,-1],
   [1,1],[1,-1],[-1,1],[-1,-1]
 ];
-
 
 /* =====================
    BOARD
 ===================== */
 
-function buildBoard() {
+function buildBoard(){
 
-  board = Array(size)
-    .fill()
+  board=Array(size).fill()
     .map(()=>Array(size).fill(null));
 
-  for (let i=0;i<seedCount;i++) {
+  for(let i=0;i<seedCount;i++){
     plantEquation();
   }
 
-  for (let r=0;r<size;r++) {
-    for (let c=0;c<size;c++) {
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
 
-      if (board[r][c]===null) {
-        board[r][c] = rand(5,maxNum);
+      if(board[r][c]===null){
+        board[r][c]=rand(5,maxNum);
       }
     }
   }
 }
 
-
 /* =====================
-   MEDIUM DIFFICULTY
+   MEDIUM MODE
 ===================== */
 
-function plantEquation() {
+function plantEquation(){
 
-  // Favor easier ops
-  const op = ['+','+','+','-','-','*','/'][rand(0,6)];
+  const op=['+','+','+','-','-','*','/'][rand(0,6)];
 
   let a,b,c;
 
-  switch(op) {
+  switch(op){
 
     case '+':
-      a = rand(10,40);
-      b = rand(5,35);
-      c = a+b;
+      a=rand(10,40);
+      b=rand(5,35);
+      c=a+b;
       break;
 
     case '-':
-      a = rand(25,70);
-      b = rand(5,25);
+      a=rand(25,70);
+      b=rand(5,25);
       if(b>a)[a,b]=[b,a];
-      c = a-b;
+      c=a-b;
       break;
 
     case '*':
-      a = rand(2,12);
-      b = rand(2,8);
-      c = a*b;
+      a=rand(2,12);
+      b=rand(2,8);
+      c=a*b;
       break;
 
     case '/':
-      b = rand(2,10);
-      c = rand(2,10);
-      a = b*c;
+      b=rand(2,10);
+      c=rand(2,10);
+      a=b*c;
       break;
   }
 
-  if (c > maxNum) return;
+  if(c>maxNum) return;
 
-  const r = rand(0,size-1);
-  const c0 = rand(0,size-1);
+  const r=rand(0,size-1);
+  const c0=rand(0,size-1);
 
-  const d = dirs[rand(0,7)];
+  const d=dirs[rand(0,7)];
 
-  const r1 = r + d[0];
-  const c1 = c0 + d[1];
+  const r1=r+d[0];
+  const c1=c0+d[1];
 
-  const r2 = r + d[0]*2;
-  const c2 = c0 + d[1]*2;
+  const r2=r+d[0]*2;
+  const c2=c0+d[1]*2;
 
-  if (!inside(r2,c2)) return;
+  if(!inside(r2,c2)) return;
 
-  board[r][c0] = a;
-  board[r1][c1] = b;
-  board[r2][c2] = c;
+  board[r][c0]=a;
+  board[r1][c1]=b;
+  board[r2][c2]=c;
 }
 
-
 /* =====================
-   SOLUTION SCAN
+   SOLUTIONS
 ===================== */
 
 function scanSolutions(){
@@ -271,9 +312,8 @@ function scanSolutions(){
     }
   }
 
-  totalSolutions = allSolutions.size;
+  totalSolutions=allSolutions.size;
 }
-
 
 function check(a,b,c,r,c0,r1,c1,r2,c2){
 
@@ -284,7 +324,6 @@ function check(a,b,c,r,c0,r1,c1,r2,c2){
   if(a*b===c) allSolutions.add(base+"*");
   if(b!==0 && a/b===c) allSolutions.add(base+"/");
 }
-
 
 /* =====================
    UI
@@ -306,36 +345,53 @@ function makeGrid(){
       cell.dataset.row=r;
       cell.dataset.col=c;
 
-      cell.addEventListener("mousedown",startDrag);
-      cell.addEventListener("mouseenter",dragOver);
-      cell.addEventListener("mouseup",endDrag);
+      cell.addEventListener("pointerdown",startDrag);
+      cell.addEventListener("pointerenter",dragOver);
+      cell.addEventListener("pointerup",endDrag);
 
       g.appendChild(cell);
     }
   }
 
-  document.addEventListener("mouseup",endDrag);
+  document.addEventListener("pointerup",endDrag);
 }
 
-
 /* =====================
-   DRAG
+   DRAG (MOBILE SAFE)
 ===================== */
 
 function startDrag(e){
+
   e.preventDefault();
+
+  document.body.style.overflow="hidden";
+
   reset();
   dragging=true;
+
   add(this);
+
+  this.setPointerCapture(e.pointerId);
 }
 
 function dragOver(){
+
   if(!dragging) return;
+
   tryAdd(this);
 }
 
-function endDrag(){
+function endDrag(e){
+
   dragging=false;
+
+  document.body.style.overflow="";
+
+  if(e && e.pointerId!==undefined){
+    try{
+      this.releasePointerCapture(e.pointerId);
+    }catch{}
+  }
 }
 
 function tryAdd(cell){
@@ -351,6 +407,7 @@ function tryAdd(cell){
 }
 
 function add(cell){
+
   cell.classList.add("active");
   path.push(cell);
 }
@@ -367,21 +424,20 @@ function adjacent(a,b){
          Math.abs(c1-c2)<=1;
 }
 
-
 /* =====================
    GAME
 ===================== */
 
 function setOp(op){
+
   operator=op;
   show("Operator: "+op);
 }
 
-
 function submit(){
 
   if(path.length!==3){
-    show("Drag 3 squares");
+    show("Select 3 squares");
     return;
   }
 
@@ -413,7 +469,7 @@ function submit(){
     .join("-")+operator;
 
   if(used.has(eq)){
-    show("Used");
+    show("Already used");
     reset();
     return;
   }
@@ -429,13 +485,12 @@ function submit(){
 
     show("Correct! +"+c);
 
-  } else {
+  }else{
     show("Wrong");
   }
 
   reset();
 }
-
 
 /* =====================
    HELPERS
@@ -443,9 +498,8 @@ function submit(){
 
 function reset(){
 
-  document.querySelectorAll(".cell").forEach(c=>{
-    c.classList.remove("active");
-  });
+  document.querySelectorAll(".cell")
+    .forEach(c=>c.classList.remove("active"));
 
   path=[];
   operator=null;
@@ -462,7 +516,6 @@ function updateStats(){
   document.getElementById("total").textContent=totalSolutions;
 }
 
-
 function inside(r,c){
   return r>=0&&r<size&&c>=0&&c<size;
 }
@@ -471,31 +524,28 @@ function rand(a,b){
   return Math.floor(Math.random()*(b-a+1))+a;
 }
 
-
 /* =====================
    NEW BOARD
 ===================== */
 
 function newBoard(){
 
-  let tries = 0;
+  let tries=0;
 
   while(true){
 
     tries++;
 
     used.clear();
-    score = 0;
-    found = 0;
+    score=0;
+    found=0;
 
     buildBoard();
     scanSolutions();
 
-    if(totalSolutions === TARGET_SOLUTIONS){
-      break;
-    }
+    if(totalSolutions===TARGET_SOLUTIONS) break;
 
-    if(tries > MAX_TRIES){
+    if(tries>MAX_TRIES){
       console.warn("Fallback board used");
       break;
     }
@@ -505,7 +555,6 @@ function newBoard(){
   reset();
   updateStats();
 }
-
 
 /* =====================
    INIT
